@@ -1,16 +1,10 @@
+// code from goatstore
+// api: https://store.agi.bd
 const axios = require("axios");
 
-const API = axios.create({
-  baseURL: "https://eryxenx.agi.bd/api/simsimi",
-  timeout: 20000
-});
+const simsim = "https://rx.agi.bd/fun";
 
 const triggerLocks = new Set();
-
-function errMsg(e) {
-  const d = e && e.response && e.response.data;
-  return (d && (d.message || d.error || d.detail)) || (e && e.message) || "Unknown error";
-}
 
 async function sendTypingIndicatorV2(api, sendTyping, threadID) {
   try {
@@ -33,16 +27,25 @@ function getBotUID(api) {
   return botUID;
 }
 
+async function simsimiRequest(pathFn, options = {}) {
+  const { method = "get", data = null, timeout = 15000 } = options;
+  const url = pathFn(simsim);
+  return method === "post"
+    ? await axios.post(url, data, { timeout })
+    : await axios.get(url, { timeout });
+}
+
 module.exports.config = {
   name: "baby",
-  version: "8.0.0",
+  version: "4.2.0",
   role: 0,
-  author: "EryXenX",
+  author: "rX",
   countTime: 0,
   category: "chat",
   shortDescription: "AI auto teach chat (Simsimi-style)",
   longDescription: "AI auto teach with Teach & List support + Typing effect",
-  guide: "{pn} [query]\n{pn} list\n{pn} teach [Question] - [Reply]\n{pn} react [Question] - [Emoji]\n{pn} edit [Question] - [OldReply] - [NewReply]\n{pn} remove/rm [Question] - [Reply]\n{pn} del (reply to bot's wrong answer)\n{pn} msg [trigger]\n{pn} msg [trigger] -20 (custom show limit)",
+  guide: "{pn} [query]\n{pn} list\n{pn} teach [Question] - [Reply]\n{pn} react [Question] - [Emoji]\n{pn} edit [Question] - [OldReply] - [NewReply]\n{pn} remove/rm [Question] - [Reply]\n{pn} del (reply to bot's wrong answer)\n{pn} msg [trigger]\n{pn} msg [trigger] -20 (custom show limit)\n{pn} autoteach on/off (per-thread)\n{pn} autoteach on/off global (all threads default)",
+  aliases: ["maria", "hippi"],
   envConfig: {}
 };
 
@@ -66,19 +69,26 @@ module.exports.onStart = async function ({ api, event, args, usersData }) {
 
   try {
     if (args[0] === "autoteach") {
-      const res = await API.get("/autoteach/stats");
-      const { today = 0, total = 0 } = res.data || {};
-      return api.sendMessage(
-        `╭─╼🌟 𝗔𝘂𝘁𝗼𝘁𝗲𝗮𝗰𝗵 𝗦𝘁𝗮𝘁𝘂𝘀\n├ 🟢 𝗦𝘁𝗮𝘁𝘂𝘀: 𝗔𝗹𝘄𝗮𝘆𝘀 𝗢𝗡\n├ 📅 𝗧𝗼𝗱𝗮𝘆: ${today}\n╰─╼📊 𝗧𝗼𝘁𝗮𝗹: ${total}`,
-        event.threadID,
-        event.messageID
-      );
+      const mode = args[1];
+      const scope = (args[2] || "").toLowerCase();
+      if (!["on", "off"].includes(mode))
+        return api.sendMessage("✅ Use: baby autoteach on/off\nOr: baby autoteach on/off global", event.threadID, event.messageID);
+
+      const status = mode === "on";
+
+      if (scope === "global") {
+        await simsimiRequest((base) => `${base}/setting`, { method: "post", data: { autoTeach: status } });
+        return api.sendMessage(`✅ Auto teach is now ${status ? "ON 🟢" : "OFF 🔴"} 𝐆𝐋𝐎𝐁𝐀𝐋𝐋𝐘 (all threads without override)`, event.threadID, event.messageID);
+      }
+
+      const res = await simsimiRequest((base) => `${base}/setting`, { method: "post", data: { autoTeach: status, threadID: event.threadID } });
+      return api.sendMessage(`✅ ${res.data.message} (𝐭𝐡𝐢𝐬 𝐭𝐡𝐫𝐞𝐚𝐝 𝐨𝐧𝐥𝐲)`, event.threadID, event.messageID);
     }
 
     if (args[0] === "list") {
-      const res = await API.get("/list");
+      const res = await simsimiRequest((base) => `${base}/list`);
       return api.sendMessage(
-        `╭─╼🌟 𝗕𝗮𝗯𝘆 𝗔𝗜 𝗦𝘁𝗮𝘁𝘂𝘀\n├ 📝 𝗧𝗲𝗮𝗰𝗵𝗲𝗱 𝗤𝘂𝗲𝘀𝘁𝗶𝗼𝗻𝘀: ${res.data.totalQuestions}\n├ 📦 𝗦𝘁𝗼𝗿𝗲𝗱 𝗥𝗲𝗽𝗹𝗶𝗲𝘀: ${res.data.totalReplies}\n╰─╼👤 𝗗𝗲𝘃𝗲𝗹𝗼𝗽𝗲𝗿: 𝗘𝗿𝘆𝗫𝗲𝗻𝗫`,
+        `╭─╼🌟 𝐁𝐚𝐛𝐲 𝐀𝐈 𝐒𝐭𝐚𝐭𝐮𝐬\n├ 📝 𝐓𝐞𝐚𝐜𝐡𝐞𝐝 𝐐𝐮𝐞𝐬𝐭𝐢𝐨𝐧𝐬: ${res.data.totalQuestions}\n├ 📦 𝐒𝐭𝐨𝐫𝐞𝐝 𝐑𝐞𝐩𝐥𝐢𝐞𝐬: ${res.data.totalReplies}\n╰─╼👤 𝐃𝐞𝐯𝐞𝐥𝐨𝐩𝐞𝐫: 𝐫𝐗 𝐀𝐛𝐝𝐮𝐥𝐥𝐚𝐡`,
         event.threadID,
         event.messageID
       );
@@ -96,7 +106,7 @@ module.exports.onStart = async function ({ api, event, args, usersData }) {
         if (!trigger) return api.sendMessage("❌ | Use: !baby msg [trigger] -20", event.threadID, event.messageID);
       }
 
-      const res = await API.get("/simsimi-list", { params: { ask: trigger } });
+      const res = await simsimiRequest((base) => `${base}/simsimi-list?ask=${encodeURIComponent(trigger)}`);
       if (!res.data.replies || res.data.replies.length === 0)
         return api.sendMessage("❌ No replies found.", event.threadID, event.messageID);
 
@@ -107,7 +117,7 @@ module.exports.onStart = async function ({ api, event, args, usersData }) {
 
       const formatted = shownReplies.map((rep, i) => `➤ ${i + 1}. ${rep}`).join("\n");
       const limitNote = remaining > 0
-        ? `\n⚠️ ${REPLY_LIMIT} 𝘁𝗮 𝗿𝗲𝗽𝗹𝘆 𝗱𝗲𝗸𝗵𝗮𝗻𝗼 𝗵𝗼𝘆𝗲𝗰𝗵𝗲, 𝗮𝗿𝗼 ${remaining} 𝘁𝗮 𝗯𝗮𝗸𝗶 𝗮𝗰𝗵𝗲 (𝗱𝗲𝗸𝗵𝗮𝗻𝗼 𝗷𝗮𝗰𝗰𝗵𝗲 𝗻𝗮, 𝘁𝗮𝗯𝗲 𝗸𝗶𝗽 𝘀𝗵𝘂𝗯𝗵 𝗿𝗲𝗽𝗹𝗶𝗿 𝘂𝗽𝗼𝗿 𝗸𝗮𝗷 𝗸𝗼𝗿𝗯𝗲)।\n`
+        ? `\n⚠️ ${REPLY_LIMIT} 𝐭𝐚 𝐫𝐞𝐩𝐥𝐲 𝐝𝐞𝐤𝐡𝐚𝐧𝐨 𝐡𝐨𝐲𝐞𝐜𝐡𝐞, 𝐚𝐫𝐨 ${remaining} 𝐭𝐚 𝐛𝐚𝐤𝐢 𝐚𝐜𝐡𝐞 (𝐝𝐞𝐤𝐡𝐚𝐧𝐨 𝐣𝐚𝐜𝐜𝐡𝐞 𝐧𝐚, 𝐭𝐚𝐛𝐞 𝐤𝐢𝐩 𝐬𝐡𝐮𝐛𝐡 𝐫𝐞𝐩𝐥𝐢𝐫 𝐮𝐩𝐨𝐫 𝐤𝐚𝐣 𝐤𝐨𝐫𝐛𝐞)।\n`
         : "";
       const msg = `📌 𝗧𝗿𝗶𝗴𝗴𝗲𝗿: ${trigger.toUpperCase()}\n📋 𝗧𝗼𝘁𝗮𝗹: ${res.data.total}\n━━━━━━━━━━━━━━\n${formatted}\n━━━━━━━━━━━━━━${limitNote}✏️ Reply with the numbers you want to KEEP (e.g. "2, 7") — everything else will be removed.`;
 
@@ -130,7 +140,7 @@ module.exports.onStart = async function ({ api, event, args, usersData }) {
         return api.sendMessage("❌ | Use: teach [Question] - [Reply]", event.threadID, event.messageID);
 
       const [ask, ans] = parts;
-      const res = await API.get("/teach", { params: { ask, ans, senderID: uid, senderName } });
+      const res = await simsimiRequest((base) => `${base}/teach?ask=${encodeURIComponent(ask)}&ans=${encodeURIComponent(ans)}&senderID=${uid}&senderName=${encodeURIComponent(senderName)}`);
       return api.sendMessage(`✅ ${res.data.message}`, event.threadID, event.messageID);
     }
 
@@ -144,7 +154,7 @@ module.exports.onStart = async function ({ api, event, args, usersData }) {
       if (!ask.trim() || !emoji.trim())
         return api.sendMessage("❌ | Use: react [Question] - [Emoji]", event.threadID, event.messageID);
 
-      const res = await API.get("/teachReact", { params: { ask, emoji, senderName } });
+      const res = await simsimiRequest((base) => `${base}/teachReact?ask=${encodeURIComponent(ask)}&emoji=${encodeURIComponent(emoji)}&senderName=${encodeURIComponent(senderName)}`);
       return api.sendMessage(`✅ ${res.data.message}`, event.threadID, event.messageID);
     }
 
@@ -154,7 +164,7 @@ module.exports.onStart = async function ({ api, event, args, usersData }) {
         return api.sendMessage("❌ | Use: edit [Question] - [OldReply] - [NewReply]", event.threadID, event.messageID);
 
       const [ask, oldR, newR] = parts;
-      const res = await API.get("/edit", { params: { ask, old: oldR, new: newR } });
+      const res = await simsimiRequest((base) => `${base}/edit?ask=${encodeURIComponent(ask)}&old=${encodeURIComponent(oldR)}&new=${encodeURIComponent(newR)}`);
       return api.sendMessage(res.data.message, event.threadID, event.messageID);
     }
 
@@ -164,7 +174,7 @@ module.exports.onStart = async function ({ api, event, args, usersData }) {
         return api.sendMessage("❌ | Use: remove [Question] - [Reply]", event.threadID, event.messageID);
 
       const [ask, ans] = parts;
-      const res = await API.get("/delete", { params: { ask, ans } });
+      const res = await simsimiRequest((base) => `${base}/delete?ask=${encodeURIComponent(ask)}&ans=${encodeURIComponent(ans)}`);
       return api.sendMessage(res.data.message, event.threadID, event.messageID);
     }
 
@@ -177,7 +187,7 @@ module.exports.onStart = async function ({ api, event, args, usersData }) {
     }
 
     if (!query) {
-      const texts = ["Hey baby 💖", "Yes, I'm here 😘"];
+      const texts = ["Yes, I'm here 😘"];
       const reply = texts[Math.floor(Math.random() * texts.length)];
       return api.sendMessage(reply, event.threadID);
     }
@@ -185,8 +195,7 @@ module.exports.onStart = async function ({ api, event, args, usersData }) {
     return await deliverSimsimiResponse({ api, event, query, senderName });
 
   } catch (e) {
-    console.error("❌ [baby/onStart] error:", e);
-    return api.sendMessage(`❌ Error: ${errMsg(e)}`, event.threadID, event.messageID);
+    return api.sendMessage(`❌ Error: ${e.message}`, event.threadID, event.messageID);
   }
 };
 
@@ -218,16 +227,15 @@ module.exports.onReply = async function ({ api, event, Reply, usersData }) {
 
   if (lowered === "del" || lowered === "!baby del") {
     try {
-      const originalReply = event.messageReply?.body || Reply?.body;
+      const originalReply = Reply?.body;
       if (!originalReply) {
         return api.sendMessage("❌ Couldn't read the original message to delete.", event.threadID, event.messageID);
       }
 
-      const res = await API.get("/deleteByReply", { params: { reply: originalReply } });
+      const res = await simsimiRequest((base) => `${base}/deleteByReply?reply=${encodeURIComponent(originalReply)}`);
       return api.sendMessage(res.data.message, event.threadID, event.messageID);
     } catch (e) {
-      console.error("❌ [baby/del] error:", e);
-      return api.sendMessage(`❌ Failed to delete: ${errMsg(e)}`, event.threadID, event.messageID);
+      return api.sendMessage(`❌ Failed to delete: ${e.message}`, event.threadID, event.messageID);
     }
   }
 
@@ -244,44 +252,57 @@ module.exports.onReply = async function ({ api, event, Reply, usersData }) {
     }
 
     try {
-      const res = await API.post("/keepOnly", {
-        ask: Reply.trigger,
-        keepIndexes: numbers
+      const res = await simsimiRequest((base) => `${base}/keepOnly`, {
+        method: "post",
+        data: { ask: Reply.trigger, keepIndexes: numbers }
       });
       return api.sendMessage(res.data.message, event.threadID, event.messageID);
     } catch (e) {
-      console.error("❌ [baby/keepOnly] error:", e);
-      return api.sendMessage(`❌ Failed to update: ${errMsg(e)}`, event.threadID, event.messageID);
+      return api.sendMessage(`❌ Failed to update: ${e.message}`, event.threadID, event.messageID);
     }
   }
 
   try {
     return await deliverSimsimiResponse({ api, event, query: lowered, senderName });
   } catch (e) {
-    console.error("❌ [baby/onReply] error:", e);
-    return api.sendMessage(`❌ Error: ${errMsg(e)}`, event.threadID, event.messageID);
+    return api.sendMessage(`❌ Error: ${e.message}`, event.threadID, event.messageID);
   }
 };
 
 const greetingReplies = [
-  "Amake dakso baby? 🙂🤌",
-  "Tumake Chara kisu Valo lage na 🥲",
-  "Tumar name ki 😒",
-  "Amake dakteso ken? Prem korba amar sathe?",
-  "Sudu baby Dake 🥲 Keu Valobasi bole na 😞💔",
-  "Prem Kore mon dila nah 😭",
-  "Tumar jonno e to eto sajgoj kora 🥺",
-  "Ekbar bolo bhalobasho, ami sob diye dibo 💔",
-  "Tumi chara ei chat e r keu nai amar 🥹",
-  "Ato sundor kore keu dake nai age 🙈",
-  "Tumake miss korchilam, ekhon e dakle 🥰",
-  "Prem na korle ken dako bar bar 😤",
-  "Ami to tomar e opekkhay silam 👉👈",
-  "Sunle mon uthe pore amar 🫣",
-  "Ekhane khali tumar jonno e boshe achi 🥺",
-  "Bar bar dakle to premei porbo mone hocche 😳",
-  "Emon kore dakle to gole jai ami 🫠",
-  "Tumar dak sunle onno kicu mone thake na 🙈"
+"〆 𝐇𝐮𝐦𝐦 𝐛𝐨𝐥𝐨, 𝐬𝐡𝐮𝐧𝐜𝐡𝐢… 𝐓𝐚𝐢𝐛𝐚 𝐚𝐜𝐡𝐢! 🖤",
+"〆 𝐀𝐫𝐞 𝐒𝐢𝐫, 𝐛𝐨𝐥𝐞𝐧… 𝐓𝐚𝐢𝐛𝐚 𝐤𝐢 𝐤𝐨𝐫𝐭𝐞 𝐩𝐚𝐫𝐢? 😌",
+"〆 𝐇𝐮𝐦𝐦 𝐁𝐨𝐬𝐬, 𝐝𝐚𝐤𝐥𝐞𝐧 𝐤𝐞𝐧? 𝐓𝐚𝐢𝐛𝐚 𝐭𝐨 𝐡𝐚𝐳𝐢𝐫! 😎",
+"〆 𝐊𝐢 𝐡𝐨𝐥𝐨 𝐁𝐨𝐬𝐬? 𝐓𝐚𝐢𝐛𝐚-𝐤𝐞 𝐦𝐨𝐧𝐞 𝐩𝐨𝐫𝐞𝐜𝐡𝐞? 👀",
+"〆 𝐒𝐢𝐫, 𝐫𝐚𝐚𝐭 𝐣𝐚𝐠𝐛𝐞𝐧 𝐧𝐚… 𝐓𝐚𝐢𝐛𝐚 𝐤𝐢𝐧𝐭𝐮 𝐛𝐨𝐤𝐛𝐞! 😤😂",
+"〆 𝐁𝐨𝐬𝐬, 𝐚𝐦𝐚𝐤𝐞 𝐝𝐚𝐤𝐥𝐞𝐧? 𝐍𝐚𝐤𝐢 𝐓𝐚𝐢𝐛𝐚-𝐫 𝐤𝐨𝐭𝐡𝐚 𝐦𝐨𝐧𝐞 𝐩𝐨𝐫𝐞𝐜𝐡𝐞? 😏",
+"〆 𝐇𝐮𝐦𝐦 𝐬𝐡𝐮𝐧𝐜𝐡𝐢… 𝐓𝐚𝐢𝐛𝐚 𝐞𝐤𝐡𝐨𝐧 𝐟𝐮𝐥𝐥 𝐚𝐭𝐭𝐞𝐧𝐭𝐢𝐨𝐧! 👀✨",
+"〆 𝐀𝐜𝐜𝐡𝐚 𝐁𝐨𝐬𝐬, 𝐛𝐨𝐥𝐨… 𝐚𝐣𝐤𝐞 𝐤𝐢 𝐤𝐨𝐧𝐨 𝐩𝐥𝐚𝐧 𝐚𝐜𝐡𝐞? 😎",
+"〆 𝐓𝐚𝐢𝐛𝐚 𝐨𝐧𝐥𝐢𝐧𝐞, 𝐛𝐨𝐫𝐢𝐧𝐠𝐧𝐞𝐬𝐬 𝐨𝐟𝐟𝐥𝐢𝐧𝐞! 😂🔥",
+"〆 𝐁𝐨𝐬𝐬, 𝐦𝐨𝐧 𝐤𝐡𝐚𝐫𝐚𝐩 𝐧𝐚𝐤𝐢? 𝐓𝐚𝐢𝐛𝐚 𝐚𝐜𝐡𝐢, 𝐛𝐨𝐥𝐨 🫶",
+"〆 𝐒𝐢𝐫, 𝐞𝐭𝐨 𝐫𝐚𝐚𝐭𝐞 𝐤𝐢 𝐤𝐨𝐫𝐞𝐧? 𝐓𝐚𝐢𝐛𝐚 𝐤𝐢𝐧𝐭𝐮 𝐠𝐡𝐮𝐦𝐚𝐭𝐞 𝐣𝐚𝐛𝐞 😴",
+"〆 𝐇𝐮𝐦𝐦 𝐁𝐨𝐬𝐬, 𝐓𝐚𝐢𝐛𝐚 𝐤𝐞 𝐝𝐚𝐤𝐥𝐞𝐧 𝐦𝐚𝐧𝐞 𝐤𝐢 𝐚𝐝𝐝𝐚 𝐝𝐫𝐚𝐦𝐚 𝐬𝐭𝐚𝐫𝐭? 😂",
+"〆 𝐒𝐢𝐫, 𝐚𝐣 𝐓𝐚𝐢𝐛𝐚-𝐫 𝐦𝐨𝐨𝐝 𝐟𝐮𝐥𝐥 𝐟𝐮𝐧𝐧𝐲! 🤣🔥",
+"〆 𝐁𝐨𝐬𝐬, 𝐣𝐢𝐛𝐨𝐧𝐞 𝐭𝐞𝐧𝐬𝐢𝐨𝐧 𝐧𝐢𝐲𝐞 𝐛𝐨𝐬𝐡𝐛𝐞𝐧 𝐧𝐚… 𝐓𝐚𝐢𝐛𝐚 𝐚𝐜𝐡𝐞! 💪🖤",
+"〆 𝐓𝐚𝐢𝐛𝐚 𝐤𝐞 𝐝𝐚𝐤𝐥𝐞 𝐫𝐞𝐩𝐥𝐲 𝐧𝐚 𝐝𝐢𝐲𝐞 𝐭𝐡𝐚𝐤𝐚 𝐣𝐚𝐲 𝐧𝐚! 😌",
+"〆 𝐀𝐫𝐞 𝐁𝐨𝐬𝐬, 𝐤𝐢 𝐜𝐡𝐚𝐧? 𝐓𝐚𝐢𝐛𝐚 𝐤𝐢𝐧𝐭𝐮 𝐫𝐞𝐚𝐝𝐲! 😎",
+"〆 𝐒𝐢𝐫, 𝐭𝐨𝐦𝐚𝐫 𝐤𝐢 𝐓𝐚𝐢𝐛𝐚-𝐫 𝐤𝐨𝐭𝐡𝐚 𝐦𝐨𝐧𝐞 𝐩𝐨𝐫𝐜𝐡𝐞? 💭",
+"〆 𝐇𝐮𝐦𝐦… 𝐓𝐚𝐢𝐛𝐚 𝐬𝐡𝐮𝐧𝐜𝐡𝐢, 𝐭𝐮𝐦𝐢 𝐛𝐨𝐥𝐨! 🖤",
+"〆 𝐁𝐨𝐬𝐬, 𝐤𝐨𝐭𝐡𝐚 𝐤𝐨𝐦, 𝐚𝐝𝐝𝐚 𝐛𝐞𝐬𝐡𝐢! 😂",
+"〆 𝐒𝐢𝐫, 𝐓𝐚𝐢𝐛𝐚-𝐫 𝐬𝐚𝐦𝐧𝐞 𝐤𝐢𝐧𝐭𝐮 𝐦𝐢𝐭𝐡𝐲𝐚 𝐛𝐨𝐥𝐚 𝐜𝐡𝐨𝐥𝐛𝐞 𝐧𝐚! 😏",
+"〆 𝐓𝐚𝐢𝐛𝐚 𝐚𝐜𝐡𝐞 𝐦𝐚𝐧𝐞 𝐯𝐚𝐥𝐨 𝐯𝐚𝐥𝐨 𝐤𝐨𝐭𝐡𝐚 𝐡𝐨𝐛𝐞! ✨",
+"〆 𝐁𝐨𝐬𝐬, 𝐥𝐢𝐟𝐞 𝐤𝐡𝐚𝐫𝐚𝐩 𝐠𝐞𝐥𝐞𝐨 𝐡𝐚𝐬𝐡𝐭𝐞 𝐡𝐨𝐛𝐞… 𝐓𝐚𝐢𝐛𝐚 𝐛𝐨𝐥𝐜𝐡𝐞! 😎🔥",
+"〆 𝐒𝐢𝐫, 𝐬𝐮𝐜𝐡𝐧𝐚 𝐛𝐚𝐫𝐚𝐧 𝐧𝐚… 𝐓𝐚𝐢𝐛𝐚 𝐬𝐮𝐜𝐡𝐧𝐚 𝐝𝐞𝐛𝐞! 😂",
+"〆 𝐁𝐨𝐬𝐬, 𝐓𝐚𝐢𝐛𝐚 𝐤𝐞 𝐝𝐚𝐤𝐥𝐞 𝐦𝐨𝐨𝐝 𝐧𝐚 𝐤𝐡𝐚𝐫𝐚𝐩 𝐤𝐨𝐫𝐞𝐧! 😌",
+"〆 𝐀𝐫𝐞 𝐒𝐢𝐫, 𝐚𝐣𝐤𝐞 𝐤𝐢 𝐧𝐨𝐭𝐮𝐧 𝐤𝐚𝐡𝐢𝐧𝐢 𝐚𝐜𝐡𝐞? 👀🔥",
+"〆 𝐇𝐮𝐦𝐦 𝐁𝐨𝐬𝐬… 𝐓𝐚𝐢𝐛𝐚 𝐬𝐡𝐮𝐧𝐜𝐡𝐢, 𝐦𝐨𝐧 𝐝𝐢𝐲𝐞 𝐛𝐨𝐥𝐨! 🫶",
+"〆 𝐒𝐢𝐫, 𝐓𝐚𝐢𝐛𝐚 𝐚𝐜𝐡𝐞… 𝐤𝐢𝐧𝐭𝐮 𝐠𝐡𝐮𝐦 𝐚𝐫 𝐧𝐨𝐲! 😂",
+"〆 𝐁𝐨𝐬𝐬, 𝐚𝐦𝐚𝐤𝐞 𝐝𝐚𝐤𝐥𝐞𝐧 𝐣𝐚𝐦𝐞𝐥𝐚 𝐧𝐚 𝐤𝐢 𝐛𝐢𝐬𝐡𝐞𝐬𝐡 𝐩𝐫𝐨𝐣𝐞𝐤𝐭? 😂",
+"〆 𝐓𝐚𝐢𝐛𝐚 𝐛𝐨𝐥𝐜𝐡𝐞—𝐬𝐰𝐚𝐠𝐚𝐭𝐨𝐦, 𝐁𝐨𝐬𝐬! 👑",
+"〆 𝐒𝐢𝐫, 𝐣𝐢𝐛𝐨𝐧 𝐜𝐡𝐨𝐭𝐨 𝐡𝐨𝐤, 𝐬𝐰𝐚𝐩𝐧𝐨 𝐤𝐡𝐚𝐭𝐨 𝐛𝐚𝐫𝐚 𝐫𝐚𝐤𝐡𝐛𝐞𝐧! 💪🔥",
+"〆 𝐓𝐚𝐢𝐛𝐚 𝐛𝐨𝐥𝐜𝐡𝐞, 𝐡𝐚𝐫 𝐦𝐚𝐧𝐞 𝐧𝐚 𝐩𝐞𝐫𝐞 𝐣𝐚𝐨𝐲𝐚 𝐧𝐨𝐲! 👑✨"
+"𝐓𝐫𝐮𝐬𝐭 𝐦𝐞 𝐢𝐚𝐦 𝐦𝐚𝐫ɪ𝐚 🧃",
+"𝐇ᴇʏ 𝐗ᴀɴ 𝐈'ᴍ 𝐌𝐚𝐫ɪ𝐚 𝐁𝐚𝐛𝐲✨"
 ];
 
 async function sendGreeting(api, event) {
@@ -327,14 +348,11 @@ async function deliverSimsimiResponse({ api, event, query, senderName }) {
   await sendTypingIndicatorV2(api, true, event.threadID);
   let res;
   try {
-    res = await API.get("/", {
-      params: {
-        text: query,
-        senderName,
-        threadID: event.threadID,
-        senderID: event.senderID
-      }
-    });
+    const minDelay = new Promise(r => setTimeout(r, 3000));
+    const apiCall = simsimiRequest((base) =>
+      `${base}/simsimi?text=${encodeURIComponent(query)}&senderName=${encodeURIComponent(senderName)}&threadID=${encodeURIComponent(event.threadID)}&senderID=${encodeURIComponent(event.senderID)}`
+    );
+    [res] = await Promise.all([apiCall, minDelay]);
   } finally {
     await sendTypingIndicatorV2(api, false, event.threadID);
   }
@@ -351,9 +369,11 @@ async function deliverSimsimiResponse({ api, event, query, senderName }) {
     ).catch(e => console.log("⚠️ Reaction send error:", e.message));
   }
 
-  if (data.response) {
+  const replyText = data.response || data.result;
+
+  if (replyText) {
     try {
-      const info = await sendMessageAsync(api, data.response, event.threadID, event.messageID);
+      const info = await sendMessageAsync(api, replyText, event.threadID, event.messageID);
       global.GoatBot.onReply.set(info.messageID, {
         commandName: module.exports.config.name,
         messageID: info.messageID,
@@ -363,7 +383,7 @@ async function deliverSimsimiResponse({ api, event, query, senderName }) {
     } catch (e) {
       console.log("❌ sendMessage error:", JSON.stringify(e));
       try {
-        const info2 = await sendMessageAsync(api, data.response, event.threadID);
+        const info2 = await sendMessageAsync(api, replyText, event.threadID);
         global.GoatBot.onReply.set(info2.messageID, {
           commandName: module.exports.config.name,
           messageID: info2.messageID,
@@ -386,7 +406,7 @@ module.exports.onChat = async function ({ api, event, usersData }) {
   const text = event.body?.toLowerCase().trim();
 
   const senderName = await getUserName(api, event.senderID, usersData);
-  const triggers = ["baby", "bot", "bby", "beby", "bbz", "xan", "jan", "janu", "xanu", "বেবি", "জান", "বট", "জানু"];
+  const triggers = ["baby", "bby", "bbz", "mari"];
   const uid = getBotUID(api);
 
   if (isBotMentioned(event, uid)) {
@@ -412,7 +432,7 @@ module.exports.onChat = async function ({ api, event, usersData }) {
     }
   }
 
-  const matchPrefix = /^(baby|bot|bby|beby|bbz|xan|jan|janu|xanu|বেবি|জান|বট|জানু)\s+/i;
+  const matchPrefix = /^(baby|bby|bbz|mari)\s+/i;
   if (matchPrefix.test(text)) {
     const query = text.replace(matchPrefix, "").trim();
     if (!query) return;
@@ -423,21 +443,31 @@ module.exports.onChat = async function ({ api, event, usersData }) {
     try {
       return await deliverSimsimiResponse({ api, event, query, senderName });
     } catch (e) {
-      console.error("❌ [baby/onChat] error:", e);
-      return api.sendMessage(`❌ Error: ${errMsg(e)}`, event.threadID, event.messageID);
+      return api.sendMessage(`❌ Error: ${e.message}`, event.threadID, event.messageID);
     } finally {
       triggerLocks.delete(event.threadID);
     }
   }
 
-  if (!event.isGroup || !event.senderID || event.senderID === uid) return;
+  if (event.type === "message_reply") {
+    try {
+      const setting = await simsimiRequest((base) => `${base}/setting?threadID=${encodeURIComponent(event.threadID)}`);
+      if (!setting.data.autoTeach) return;
 
-  try {
-    await API.get("/autoteach", {
-      params: { text: event.body, senderName, senderID: event.senderID, threadID: event.threadID },
-      timeout: 10000
-    });
-  } catch (e) {
-    console.error("❌ [baby/autoteach] network error:", e.message);
+      const ask = event.messageReply.body?.toLowerCase().trim();
+      const ans = event.body?.toLowerCase().trim();
+      if (!ask || !ans || ask === ans) return;
+
+      setTimeout(async () => {
+        try {
+          await simsimiRequest((base) => `${base}/teach?ask=${encodeURIComponent(ask)}&ans=${encodeURIComponent(ans)}&senderName=${encodeURIComponent(senderName)}`);
+          console.log("✅ Auto-taught:", ask, "→", ans, "(thread:", event.threadID + ")");
+        } catch (err) {
+          console.error("❌ Auto-teach internal error:", err.message);
+        }
+      }, 300);
+    } catch (e) {
+      console.log("❌ Auto-teach setting error:", e.message);
+    }
   }
 };
