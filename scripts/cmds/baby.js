@@ -7,34 +7,16 @@ const baseApiUrl = async () => {
 module.exports.config = {
     name: "baby",
     aliases: ["baby", "bbe", "babe", "bot chan"],
-    version: "7.0.0",
-    author: "dipto edit by MAMUN & Enhanced",
+    version: "6.9.1",
+    author: "dipto edit by MAMUN",
     countDown: 0,
     role: 0,
-    description: "Human-like emotional chatbot (Happy, Sad, Funny, Romantic)",
+    description: "better then all sim simi",
     category: "chat",
     guide: {
         en: "{pn} [anyMessage] OR\nteach [YourMessage] - [Reply1], [Reply2]... OR\nteach react [YourMessage] - [react1], [react2]... OR\nremove [YourMessage] OR\nrm [YourMessage] - [indexNumber] OR\nmsg [YourMessage] OR\nlist OR\nall OR\nedit [YourMessage] - [NewMessage]"
     }
 };
-
-// ইউজার মেসেজ অনুযায়ী ইমোশন/মুড নির্ধারণ করার হেল্পার ফাংশন
-function detectEmotion(text) {
-    const message = text.toLowerCase();
-    
-    if (message.includes("ভালোবাসি") || message.includes("love") || message.includes("জান") || message.includes("পাগল") || message.includes("উম্মাহ")) {
-        return "romantic";
-    } else if (message.includes("খারাপ") || message.includes("কষ্ট") || message.includes("sad") || message.includes("কান্না") || message.includes("একলা")) {
-        return "sad";
-    } else if (message.includes("ডিপ্রেশন") || message.includes("মরে যাব") || message.includes("ধুর") || message.includes("ভালো লাগে না")) {
-        return "depression";
-    } else if (message.includes("হাহা") || message.includes("lol") || message.includes("মজা") || message.includes("funny") || message.includes("হাসি")) {
-        return "funny";
-    } else if (message.includes("হ্যাপি") || message.includes("happy") || message.includes("খুশি") || message.includes("সুন্দর")) {
-        return "happy";
-    }
-    return "normal";
-}
 
 module.exports.onStart = async ({ api, event, args, usersData }) => {
     const link = `${await baseApiUrl()}/baby`;
@@ -44,12 +26,7 @@ module.exports.onStart = async ({ api, event, args, usersData }) => {
 
     try {
         if (!args[0]) {
-            const ran = [
-                "হুম বলো সোনা, শুনছি... 🖤",
-                "কি হলো? মন খারাপ নাকি? কথা বলো! 🥺",
-                "হেই! আমি তো তোমার অপেক্ষাতেই ছিলাম ✨",
-                "বলো Boss, আজকে তোমার মুড কেমন? 😌"
-            ];
+            const ran = ["Bolo baby", "hum", "type help baby", "type #baby hi"];
             return api.sendMessage(ran[Math.floor(Math.random() * ran.length)], event.threadID, event.messageID);
         }
 
@@ -129,10 +106,7 @@ module.exports.onStart = async ({ api, event, args, usersData }) => {
             return api.sendMessage(data, event.threadID, event.messageID);
         }
 
-        // ইমোশন ডিটেক্ট করে API রিকোয়েস্টে পাঠানো
-        const emotion = detectEmotion(dipto);
-        const d = (await axios.get(`${link}?text=${encodeURIComponent(dipto)}&senderID=${uid}&font=1&emotion=${emotion}`)).data.reply;
-        
+        const d = (await axios.get(`${link}?text=${encodeURIComponent(dipto)}&senderID=${uid}&font=1`)).data.reply;
         api.sendMessage(d, event.threadID, (error, info) => {
             if (info && global.GoatBot) {
                 global.GoatBot.onReply.set(info.messageID, {
@@ -156,10 +130,7 @@ module.exports.onReply = async ({ api, event, Reply }) => {
     try {
         if (event.type === "message_reply") {
             const link = await baseApiUrl();
-            const text = event.body?.toLowerCase() || "";
-            const emotion = detectEmotion(text);
-            
-            const a = (await axios.get(`${link}/baby?text=${encodeURIComponent(text)}&senderID=${event.senderID}&font=1&emotion=${emotion}`)).data.reply;
+            const a = (await axios.get(`${link}/baby?text=${encodeURIComponent(event.body?.toLowerCase())}&senderID=${event.senderID}&font=1`)).data.reply;
             await api.sendMessage(a, event.threadID, (error, info) => {
                 if (info && global.GoatBot) {
                     global.GoatBot.onReply.set(info.messageID, {
@@ -185,45 +156,49 @@ module.exports.onChat = async ({ api, event }) => {
         if (body.startsWith("baby") || body.startsWith("bby") || body.startsWith("bot") || body.startsWith("jan") || body.startsWith("babu") || body.startsWith("janu")) {
             const arr = body.replace(/^\S+\s*/, "").trim();
 
-            // অনুভূতি অনুযায়ী ক্যাটাগরি করা র্যান্ডম রিপ্লাই
-            const emotionalReplies = {
-                romantic: [
-                    "〆 জানু, তুমি ডাকলে আর আমি না এসে পারি? 🥰",
-                    "〆 সবসময় তোমার পাশেই তো আছি সোনা! 🖤✨",
-                    "〆 চোখ বন্ধ করলেও তোমাকেই দেখি, বলো কি বলবে? 😏❤️"
-                ],
-                sad: [
-                    "〆 মন খারাপ কোরো না প্লিজ, আমি তো আছি তোমার পাশে... 🥺",
-                    "〆 কি হয়েছে বলবে? একা একা কষ্ট পেয়ো না 🖤",
-                    "〆 কষ্টগুলো আমাকে দিয়ে দাও, তুমি শুধু হাসো! 🥀"
-                ],
-                funny: [
-                    "〆 ওরে বাবারে! হাসতে হাসতে তো পেট ব্যথা হয়ে গেল! 😂🔥",
-                    "〆 আরে ভাই ভাই! এত মজা কোথায় পাও? 🤣",
-                    "〆 দাঁড়াও দাঁড়াও, তোমার ফানি কথা শুনে তো আমার সিস্টেম হ্যাং হয়ে গেছে! 🤪"
-                ],
-                happy: [
-                    "〆 তোমার খুশি দেখে আমারও মন ভালো হয়ে গেল! ✨🥰",
-                    "〆 আজকের দিনটা সত্যিই দারুণ, তাই না? 🥳💫",
-                    "〆 সবসময় এমন হাসিখুশি থেকো! 👑💛"
-                ],
-                depression: [
-                    "〆 শোনো, অন্ধকার যত গভীর হয়, আলো তত কাছে আসে। একটু ধৈর্য ধরো... 💪🖤",
-                    "〆 জীবনটা অনেক সুন্দর, এভাবে ভেঙে পড়ো না। আমি আছি তো কথা বলার জন্য। 🫂",
-                    "〆 টেনশন নিও না, সব ঠিক হয়ে যাবে ইনশাআল্লাহ। ❤️"
-                ],
-                default: [
-                    "〆 𝐇𝐮𝐦𝐦 𝐛𝐨𝐥𝐨, 𝐬𝐡𝐮𝐧𝐜𝐡𝐢… 𝐎𝐦𝐢 𝐚𝐜𝐡𝐢! 🖤",
-                    "〆 𝐀𝐫𝐞 𝐒𝐢𝐫, 𝐛𝐨𝐥𝐞𝐧… 𝐎𝐦𝐢 𝐤𝐢 𝐤𝐨𝐫𝐭𝐞 𝐩𝐚𝐫𝐢? 😌",
-                    "〆 𝐇𝐮𝐦𝐦 𝐁𝐨𝐬𝐬, 𝐝𝐚𝐤𝐥𝐞𝐧 𝐤𝐞𝐧? 𝐎𝐦𝐢 𝐭𝐨 𝐡𝐚𝐳𝐢𝐫! 😎",
-                    "〆 𝐎𝐦𝐢 𝐨𝐧𝐥𝐢𝐧𝐞, 𝐛𝐨𝐫𝐢𝐧𝐠𝐧𝐞𝐬𝐬 𝐨𝐟𝐟𝐥𝐢𝐧𝐞! 😂🔥"
-                ]
-            };
+            const randomReplies = [
+"〆 𝐇𝐮𝐦𝐦 𝐛𝐨𝐥𝐨, 𝐬𝐡𝐮𝐧𝐜𝐡𝐢… 𝐎𝐦𝐢 𝐚𝐜𝐡𝐢! 🖤",
+"〆 𝐀𝐫𝐞 𝐒𝐢𝐫, 𝐛𝐨𝐥𝐞𝐧… 𝐎𝐦𝐢 𝐤𝐢 𝐤𝐨𝐫𝐭𝐞 𝐩𝐚𝐫𝐢? 😌✨",
+"〆 𝐇𝐮𝐦𝐦 𝐁𝐨𝐬𝐬, 𝐝𝐚𝐤𝐥𝐞𝐧 𝐤𝐞𝐧? 𝐎𝐦𝐢 𝐭𝐨 𝐡𝐚𝐳𝐢𝐫! 😎",
+"〆 𝐊𝐢 𝐡𝐨𝐥𝐨 𝐁𝐨𝐬𝐬? 𝐎𝐦𝐢-𝐤𝐞 𝐦𝐨𝐧𝐞 𝐩𝐨𝐫𝐞𝐜𝐡𝐞 𝐧𝐚𝐤𝐢? 👀🖤",
+"〆 𝐒𝐢𝐫, 𝐫𝐚𝐚𝐭 𝐣𝐚𝐠𝐛𝐞𝐧 𝐧𝐚… 𝐎𝐦𝐢 𝐤𝐢𝐧𝐭𝐮 𝐛𝐨𝐤𝐛𝐞! 😤😂",
+"〆 𝐁𝐨𝐬𝐬, 𝐚𝐦𝐚𝐤𝐞 𝐝𝐚𝐤𝐥𝐞𝐧? 𝐍𝐚𝐤𝐢 𝐎𝐦𝐢-𝐫 𝐤𝐨𝐭𝐡𝐚 𝐦𝐨𝐧𝐞 𝐩𝐨𝐫𝐜𝐡𝐞? 😏",
+"〆 𝐇𝐮𝐦𝐦… 𝐎𝐦𝐢 𝐬𝐡𝐮𝐧𝐜𝐡𝐢, 𝐭𝐮𝐦𝐢 𝐛𝐨𝐥𝐨… 𝐚𝐣 𝐚𝐦𝐢 𝐟𝐮𝐥𝐥 𝐚𝐭𝐭𝐞𝐧𝐭𝐢𝐨𝐧! 🫶✨",
+"〆 𝐀𝐜𝐜𝐡𝐚 𝐁𝐨𝐬𝐬, 𝐛𝐨𝐥𝐨… 𝐎𝐦𝐢 𝐤𝐢 𝐤𝐨𝐧𝐨 𝐩𝐥𝐚𝐧 𝐞 𝐚𝐬𝐡𝐛𝐞? 😎🔥",
+"〆 𝐎𝐦𝐢 𝐨𝐧𝐥𝐢𝐧𝐞, 𝐛𝐨𝐫𝐢𝐧𝐠𝐧𝐞𝐬𝐬 𝐨𝐟𝐟𝐥𝐢𝐧𝐞! 😂🔥",
+"〆 𝐁𝐨𝐬𝐬, 𝐦𝐨𝐧 𝐤𝐡𝐚𝐫𝐚𝐩? 𝐎𝐦𝐢 𝐚𝐜𝐡𝐢, 𝐛𝐨𝐥𝐨 🫶🖤",
+"〆 𝐒𝐢𝐫, 𝐞𝐭𝐨 𝐫𝐚𝐚𝐭𝐞 𝐤𝐢 𝐤𝐨𝐫𝐞𝐧? 𝐎𝐦𝐢 𝐤𝐢𝐧𝐭𝐮 𝐠𝐡𝐮𝐦𝐚𝐭𝐞 𝐣𝐚𝐛𝐞 😴😂",
+"〆 𝐇𝐮𝐦𝐦 𝐁𝐨𝐬𝐬… 𝐎𝐦𝐢-𝐤𝐞 𝐝𝐚𝐤𝐚 𝐦𝐚𝐧𝐞 𝐚𝐝𝐝𝐚 𝐝𝐫𝐚𝐦𝐚 𝐬𝐭𝐚𝐫𝐭! 😂🍿",
+"〆 𝐒𝐢𝐫, 𝐚𝐣 𝐎𝐦𝐢-𝐫 𝐦𝐨𝐨𝐝 𝐟𝐮𝐥𝐥 𝐟𝐮𝐧𝐧𝐲! 𝐒𝐨 𝐛𝐞 𝐫𝐞𝐚𝐝𝐲 🤣🔥",
+"〆 𝐁𝐨𝐬𝐬, 𝐣𝐢𝐛𝐨𝐧𝐞 𝐭𝐞𝐧𝐬𝐢𝐨𝐧 𝐧𝐢𝐲𝐞 𝐛𝐨𝐬𝐡𝐛𝐞𝐧 𝐧𝐚… 𝐎𝐦𝐢 𝐚𝐜𝐡𝐞! 💪🖤",
+"〆 𝐎𝐦𝐢-𝐤𝐞 𝐝𝐚𝐤𝐥𝐞 𝐫𝐞𝐩𝐥𝐲 𝐧𝐚 𝐝𝐢𝐲𝐞 𝐭𝐡𝐚𝐤𝐚 𝐣𝐚𝐲 𝐧𝐚! 😌😂",
+"〆 𝐀𝐫𝐞 𝐁𝐨𝐬𝐬, 𝐤𝐢 𝐜𝐡𝐚𝐧? 𝐎𝐦𝐢 𝐤𝐢𝐧𝐭𝐮 𝐫𝐞𝐚𝐝𝐲! 😎✨",
+"〆 𝐒𝐢𝐫, 𝐭𝐨𝐦𝐚𝐫 𝐤𝐢 𝐎𝐦𝐢-𝐫 𝐤𝐨𝐭𝐡𝐚 𝐦𝐨𝐧𝐞 𝐩𝐨𝐫𝐜𝐡𝐞? 💭🖤",
+"〆 𝐁𝐨𝐬𝐬, 𝐤𝐨𝐭𝐡𝐚 𝐤𝐨𝐦… 𝐎𝐦𝐢-𝐫 𝐬𝐚𝐭𝐡𝐞 𝐚𝐝𝐝𝐚 𝐛𝐞𝐬𝐡𝐢! 😂☕",
+"〆 𝐎𝐦𝐢 𝐚𝐜𝐡𝐞 𝐦𝐚𝐧𝐞 𝐚𝐣𝐤𝐞 𝐚𝐝𝐝𝐚-𝐫 𝐦𝐨𝐨𝐝 𝐨𝐧! ✨🖤",
+"〆 𝐁𝐨𝐬𝐬, 𝐥𝐢𝐟𝐞 𝐤𝐡𝐚𝐫𝐚𝐩 𝐠𝐞𝐥𝐞𝐨 𝐡𝐚𝐬𝐡𝐭𝐞 𝐡𝐨𝐛𝐞… 𝐎𝐦𝐢 𝐛𝐨𝐥𝐜𝐡𝐞! 😎🔥",
+"〆 𝐒𝐢𝐫, 𝐬𝐮𝐜𝐡𝐧𝐚 𝐛𝐚𝐫𝐚𝐧 𝐧𝐚… 𝐎𝐦𝐢 𝐬𝐮𝐜𝐡𝐧𝐚 𝐝𝐞𝐛𝐞! 😂",
+"〆 𝐁𝐨𝐬𝐬, 𝐎𝐦𝐢-𝐤𝐞 𝐝𝐚𝐤𝐥𝐞 𝐦𝐨𝐨𝐝 𝐤𝐡𝐚𝐫𝐚𝐩 𝐤𝐨𝐫𝐛𝐞𝐧 𝐧𝐚… 𝐎𝐦𝐢 𝐤𝐢𝐧𝐭𝐮 𝐬𝐞𝐧𝐬𝐢𝐭𝐢𝐯𝐞! 😌🖤",
+"〆 𝐀𝐫𝐞 𝐒𝐢𝐫, 𝐚𝐣𝐤𝐞 𝐤𝐢 𝐧𝐨𝐭𝐮𝐧 𝐤𝐚𝐡𝐢𝐧𝐢 𝐚𝐜𝐡𝐞? 𝐎𝐦𝐢 𝐬𝐡𝐮𝐧𝐭𝐞 𝐫𝐞𝐚𝐝𝐲! 👀🍿",
+"〆 𝐇𝐮𝐦𝐦 𝐁𝐨𝐬𝐬… 𝐦𝐨𝐧 𝐝𝐢𝐲𝐞 𝐛𝐨𝐥𝐨, 𝐎𝐦𝐢 𝐤𝐢𝐧𝐭𝐮 𝐬𝐡𝐮𝐧𝐜𝐡𝐢! 🫶",
+"〆 𝐒𝐢𝐫, 𝐎𝐦𝐢 𝐚𝐜𝐡𝐞… 𝐤𝐢𝐧𝐭𝐮 𝐠𝐡𝐮𝐦 𝐚𝐫 𝐧𝐨𝐲, 𝐚𝐝𝐝𝐚 𝐚𝐠𝐞! 😂🌙",
+"〆 𝐁𝐨𝐬𝐬, 𝐚𝐦𝐚𝐤𝐞 𝐝𝐚𝐤𝐥𝐞𝐧—𝐣𝐚𝐦𝐞𝐥𝐚 𝐧𝐚𝐤𝐢 𝐛𝐢𝐬𝐡𝐞𝐬𝐡 𝐩𝐫𝐨𝐣𝐞𝐤𝐭? 😂🔥",
+"〆 𝐎𝐦𝐢 𝐛𝐨𝐥𝐜𝐡𝐞—𝐬𝐰𝐚𝐠𝐚𝐭𝐨𝐦 𝐁𝐨𝐬𝐬! 👑✨",
+"〆 𝐁𝐨𝐬𝐬, 𝐭𝐮𝐦𝐢 𝐝𝐚𝐤𝐥𝐞 𝐎𝐦𝐢 𝐚𝐬𝐡𝐛𝐞… 𝐤𝐚𝐫𝐨𝐧 𝐭𝐨𝐦𝐚𝐫 𝐝𝐚𝐤𝐞 𝐚𝐥𝐚𝐝𝐚 𝐯𝐢𝐛𝐞 𝐚𝐜𝐡𝐞! 🖤😌",
+"〆 𝐁𝐨𝐬𝐬, 𝐭𝐨𝐦𝐚𝐫 𝐧𝐚𝐦 𝐬𝐡𝐮𝐧𝐥𝐞𝐢 𝐎𝐦𝐢-𝐫 𝐦𝐨𝐨𝐝 𝐚𝐩𝐧𝐢 𝐚𝐩𝐧𝐢 𝐩𝐥𝐮𝐬! 😏✨",
+"〆 𝐒𝐢𝐫, 𝐎𝐦𝐢 𝐭𝐨 𝐚𝐜𝐡𝐢… 𝐤𝐢𝐧𝐭𝐮 𝐦𝐨𝐧 𝐩𝐞𝐭𝐞 𝐤𝐢 𝐚𝐜𝐡𝐞 𝐬𝐡𝐞𝐭𝐚 𝐛𝐨𝐥𝐛𝐨 𝐧𝐚! 😂🖤",
+"〆 𝐎𝐦𝐢 𝐤𝐢𝐧𝐭𝐮 𝐫𝐚𝐚𝐠 𝐤𝐨𝐫𝐢 𝐧𝐚… 𝐬𝐡𝐮𝐝𝐡𝐮 𝐞𝐤𝐭𝐮 𝐚𝐝𝐝𝐚 𝐜𝐡𝐚𝐢! 🥹😂",
+"〆 𝐁𝐨𝐬𝐬, 𝐭𝐨𝐦𝐚𝐫 𝐦𝐞𝐬𝐬𝐚𝐠𝐞 𝐚𝐬𝐡𝐥𝐞 𝐎𝐦𝐢-𝐫 𝐦𝐨𝐧𝐢𝐭𝐨𝐫 𝐧𝐢𝐣𝐞𝐢 𝐨𝐧 𝐡𝐨𝐲𝐞 𝐣𝐚𝐲! 👀🖤",
+"〆 𝐇𝐮𝐦𝐦… 𝐭𝐮𝐦𝐢 𝐣𝐨𝐝𝐢 𝐞𝐦𝐧𝐢 𝐤𝐨𝐫𝐞 𝐝𝐚𝐤𝐨, 𝐎𝐦𝐢 𝐤𝐢 𝐤𝐨𝐫𝐞 𝐧𝐚 𝐚𝐬𝐡𝐞? 😌🫶",
+"〆 𝐁𝐨𝐬𝐬, 𝐎𝐦𝐢-𝐫 𝐤𝐚𝐜𝐡𝐞 𝐚𝐬𝐡𝐥𝐞 𝐤𝐨𝐭𝐡𝐚 𝐬𝐡𝐞𝐬𝐡 𝐡𝐨𝐲 𝐧𝐚… 𝐚𝐝𝐝𝐚 𝐣𝐚𝐦𝐞! 😂❤️",
+"〆 𝐒𝐢𝐫, 𝐎𝐦𝐢-𝐤𝐞 𝐝𝐚𝐤𝐚𝐫 𝐤𝐚𝐫𝐨𝐧 𝐤𝐢? 𝐌𝐨𝐧𝐞 𝐩𝐨𝐫𝐥𝐞 𝐛𝐨𝐥𝐛𝐞𝐧… 𝐚𝐦𝐢 𝐬𝐡𝐮𝐧𝐛𝐨! 👀🖤",
+"〆 𝐁𝐨𝐬𝐬, 𝐎𝐦𝐢 𝐭𝐨 𝐚𝐜𝐡𝐢… 𝐞𝐤𝐭𝐮 𝐦𝐢𝐬𝐬 𝐤𝐨𝐫𝐥𝐞𝐢 𝐝𝐚𝐤 𝐝𝐢𝐲𝐞𝐧! 😏🫶",
+"〆 𝐎𝐦𝐢 𝐤𝐢𝐧𝐭𝐮 𝐛𝐨𝐭 𝐧𝐨𝐲… 𝐦𝐨𝐨𝐝 𝐛𝐮𝐣𝐡𝐢, 𝐚𝐝𝐝𝐚 𝐝𝐢𝐲𝐞 𝐣𝐚𝐧! 😂🤖🖤"
+];
 
-            // যদি শুধু কাস্টম নাম দিয়ে ডাকে
+            // যদি শুধু কাস্টম নাম দিয়ে ডাকে (যেমন: baby, bby, janu)
             if (!arr) {
-                const allDefault = emotionalReplies.default;
-                const replyText = allDefault[Math.floor(Math.random() * allDefault.length)];
+                const replyText = randomReplies[Math.floor(Math.random() * randomReplies.length)];
                 return api.sendMessage(replyText, event.threadID, (error, info) => {
                     if (info && global.GoatBot) {
                         global.GoatBot.onReply.set(info.messageID, {
@@ -236,10 +211,9 @@ module.exports.onChat = async ({ api, event }) => {
                 }, event.messageID);
             }
 
-            // যদি নামের সাথে অন্য কিছু লেখে
+            // যদি নামের সাথে অন্য কিছু লেখে (যেমন: baby hi)
             const link = await baseApiUrl();
-            const emotion = detectEmotion(arr);
-            const res = await axios.get(`${link}/baby?text=${encodeURIComponent(arr)}&senderID=${event.senderID}&font=1&emotion=${emotion}`);
+            const res = await axios.get(`${link}/baby?text=${encodeURIComponent(arr)}&senderID=${event.senderID}&font=1`);
             const a = res.data.reply;
 
             await api.sendMessage(a, event.threadID, (error, info) => {
